@@ -1,1 +1,9 @@
+System Health Check Report
 
+-------------------------
+CPU Usage: OK
+Memory Usage: OK
+Disk Space: OK
+Network Connectivity: OK
+
+Status: HEALTHY
