@@ -1,29 +1,28 @@
-# DevOps CI/CD Starter
+## Use Case
 
-This repository demonstrates a basic DevOps CI/CD pipeline using GitHub Actions.
+This project simulates a DevOps workflow where:
 
-## Features
+- Code is pushed to a repository
+- Automated validation is triggered via GitHub Actions
+- Shell scripts are linted using ShellCheck
+- A system health check script runs to verify environment readiness
 
-- Automated CI pipeline using GitHub Actions
-- Shell script validation using ShellCheck
-- System health check automation script
+This mirrors real-world CI/CD pipelines used in production environments to ensure code quality, reliability, and deployment readiness.
 
-## Project Structure
-.github/workflows/lint.yml → CI pipeline
-scripts/healthcheck.sh → system health script
+---
 
-## Running the Health Check
+## CI/CD Pipeline Flow
 
-Make script executable:
-chmod +x scripts/healthcheck.sh
+1. Developer pushes code
+2. GitHub Actions workflow triggers automatically
+3. Shell scripts are validated (ShellCheck)
+4. Health check script executes
+5. Pipeline passes or fails based on validation results
 
-Run:
-./scripts/healthcheck.sh
+---
 
-## CI Pipeline
+## Proof of Execution
 
-Every push to the repository triggers:
-
-- ShellCheck validation on all scripts
-
-This ensures scripts follow best practices.
+- All workflows successfully executed (see Actions tab)
+- Multiple commits demonstrate iteration and improvement
+- Health check script validated in CI environment
