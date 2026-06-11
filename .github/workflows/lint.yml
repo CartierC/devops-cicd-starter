@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   shellcheck:
-    name: ShellCheck
+    name: ShellCheck and Healthcheck Artifact
     runs-on: ubuntu-latest
 
     steps:
@@ -30,16 +30,20 @@ jobs:
         id: discover
         run: |
           echo "=== Shell scripts found ==="
-          SCRIPT_COUNT=$(find scripts -type f -name "*.sh" 2>/dev/null | wc -l)
-          echo "Script count: $SCRIPT_COUNT"
-          find scripts -type f -name "*.sh" -print 2>/dev/null || echo "(No scripts found)"
+          SCRIPT_COUNT=$(find scripts -type f -name "*.sh" 2>/dev/null | wc -l | tr -d ' ')
           echo "script_count=$SCRIPT_COUNT" >> "$GITHUB_OUTPUT"
+
+          if [ "$SCRIPT_COUNT" -eq 0 ]; then
+            echo "No shell scripts found under scripts/."
+          else
+            find scripts -type f -name "*.sh" -print
+          fi
 
       - name: Run ShellCheck validation
         run: |
           set -e
 
-          SCRIPT_COUNT=${{ steps.discover.outputs.script_count }}
+          SCRIPT_COUNT="${{ steps.discover.outputs.script_count }}"
 
           if [ "$SCRIPT_COUNT" -eq 0 ]; then
             echo "✅ No shell scripts found. Nothing to validate."
@@ -47,16 +51,57 @@ jobs:
           fi
 
           echo "=== Running ShellCheck on $SCRIPT_COUNT script(s) ==="
-          find scripts -type f -name "*.sh" -print0 | xargs -0 -I {} bash -c 'echo "Checking: {}"; shellcheck "{}"'
+          find scripts -type f -name "*.sh" -print0 | xargs -0 shellcheck
 
           echo ""
           echo "✅ All shell scripts passed ShellCheck validation"
 
+      - name: Run healthcheck script
+        run: |
+          if [ ! -f scripts/healthcheck.sh ]; then
+            echo "⚠️ scripts/healthcheck.sh not found. Skipping healthcheck execution."
+            exit 0
+          fi
+
+          echo "=== Running healthcheck script ==="
+          chmod +x scripts/healthcheck.sh
+          mkdir -p reports
+
+          bash scripts/healthcheck.sh
+
+          echo ""
+          echo "=== Checking for healthcheck report ==="
+
+          if [ -f reports/healthcheck-output.txt ]; then
+            echo "✅ Healthcheck report generated"
+            echo ""
+            echo "=== Report preview (first 100 lines) ==="
+            head -100 reports/healthcheck-output.txt
+          else
+            echo "⚠️ Healthcheck ran, but reports/healthcheck-output.txt was not generated"
+          fi
+
+      - name: Upload healthcheck report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: healthcheck-output
+          path: reports/healthcheck-output.txt
+          if-no-files-found: warn
+          retention-days: 30
+
       - name: Report validation status
         if: always()
         run: |
+          echo ""
           echo "=== Validation Report ==="
           echo "Repository: CartierC/devops-cicd-starter"
-          echo "Workflow: Lint (ShellCheck)"
-          echo "Status: ${{ job.status }}"
+          echo "Workflow: Lint"
+          echo ""
+          echo "Steps completed:"
+          echo "✓ ShellCheck validation"
+          echo "✓ Healthcheck execution (if script present)"
+          echo "✓ Artifact upload (if report generated)"
+          echo ""
+          echo "Job status: ${{ job.status }}"
           echo "=========================================="
