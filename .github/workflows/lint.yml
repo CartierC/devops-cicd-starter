@@ -1,9 +1,62 @@
-name: Code Linting
-on: [push]
+name: Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
 jobs:
-  lint:
+  shellcheck:
+    name: ShellCheck
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Run ShellCheck
-        run: echo "Linting complete. No errors found."
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck --version
+
+      - name: Discover shell scripts
+        id: discover
+        run: |
+          echo "=== Shell scripts found ==="
+          SCRIPT_COUNT=$(find scripts -type f -name "*.sh" 2>/dev/null | wc -l)
+          echo "Script count: $SCRIPT_COUNT"
+          find scripts -type f -name "*.sh" -print 2>/dev/null || echo "(No scripts found)"
+          echo "script_count=$SCRIPT_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Run ShellCheck validation
+        run: |
+          set -e
+
+          SCRIPT_COUNT=${{ steps.discover.outputs.script_count }}
+
+          if [ "$SCRIPT_COUNT" -eq 0 ]; then
+            echo "✅ No shell scripts found. Nothing to validate."
+            exit 0
+          fi
+
+          echo "=== Running ShellCheck on $SCRIPT_COUNT script(s) ==="
+          find scripts -type f -name "*.sh" -print0 | xargs -0 -I {} bash -c 'echo "Checking: {}"; shellcheck "{}"'
+
+          echo ""
+          echo "✅ All shell scripts passed ShellCheck validation"
+
+      - name: Report validation status
+        if: always()
+        run: |
+          echo "=== Validation Report ==="
+          echo "Repository: CartierC/devops-cicd-starter"
+          echo "Workflow: Lint (ShellCheck)"
+          echo "Status: ${{ job.status }}"
+          echo "=========================================="
